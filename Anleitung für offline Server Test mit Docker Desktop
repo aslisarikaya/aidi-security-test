@@ -1,0 +1,17 @@
+Zuerst: Dockerfile in \src Folder kopieren
+
+Docker Desktop: 
+cd "~\src"
+
+# Container bauen
+docker build -t price-server:latest .
+
+# Container starten
+docker run -p 8080:80 price-server:latest
+
+
+Testen mit Bash:
+curl http://localhost:8080/
+
+Antwortschema:
+{"bitcoin": {"usd": 68320}}

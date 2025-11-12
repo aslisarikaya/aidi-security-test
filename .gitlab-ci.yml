@@ -1,0 +1,60 @@
+stages:
+  - lint
+ # - test
+  - build
+  - deploy
+
+variables:
+  # Image für alle Jobs (leichtes Python-Image)
+  PYTHON_IMAGE: "python:3.11-slim"
+
+# ----------------------------------------------------------------------
+# 🧹 1. Code-Qualität prüfen
+# ----------------------------------------------------------------------
+lint:
+  stage: lint
+  image: $PYTHON_IMAGE
+  before_script:
+    - pip install ruff
+  script:
+    - echo "🔍 Running code linting with ruff..."
+    - ruff check src/
+  allow_failure: false
+
+# ----------------------------------------------------------------------
+# 🧪 2. Unit-Tests ausführen
+# ----------------------------------------------------------------------
+#test:
+ # stage: test
+#  image: $PYTHON_IMAGE
+#  before_script:
+#    - pip install flask requests pytest
+#  script:
+#    - echo "🧪 Running unit tests..."
+#    - pytest --maxfail=1 --disable-warnings -q --junitxml=report.xml
+#  artifacts:
+ #   when: always
+ #   reports:
+  #    junit: report.xml
+
+# ----------------------------------------------------------------------
+# 🐳 3. Container bauen und pushen
+# ----------------------------------------------------------------------
+build:
+  stage: build
+  image: docker:27
+  services:
+    - docker:27-dind
+  variables:
+    DOCKER_DRIVER: overlay2
+    IMAGE_TAG: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+  before_script:
+    - echo "🔐 Login to GitLab Container Registry"
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" "$CI_REGISTRY" --password-stdin
+  script:
+    - echo "🐳 Building Docker image..."
+    - docker build -t "$IMAGE_TAG" src/
+    - docker push "$IMAGE_TAG"
+  only:
+    - main
+    - merge_requests
