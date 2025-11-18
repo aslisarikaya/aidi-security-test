@@ -54,7 +54,7 @@ jobs:
 
       # --- Code Security Check (SAST/SCA - Exercise 4 Placeholder) ---
       - name: Code Security Check (SAST/SCA)
-        run: echo "TODO: Execute the aikido-local-scanner scan here."
+        run: echo "TODO Execute the aikido-local-scanner scan here."
 
       # --- Docker Build ---
       - name: Build Docker Image (Build only, no Push for CI/Feature branches)
@@ -105,4 +105,4 @@ jobs:
 
       # --- Container Security Check (Image Scan - Exercise 4 Placeholder) ---
       - name: Container Security Check (Image Scan)
-        run: echo "TODO: Execute the aikido-local-scanner image-scan here."
+        run: echo "TODO Execute the aikido-local-scanner image-scan here."
