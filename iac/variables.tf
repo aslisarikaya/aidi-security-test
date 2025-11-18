@@ -37,3 +37,24 @@ variable "template_name" {
   description = "Template to use (Ubuntu 22.04)"
   default     = "Linux Ubuntu 22.04 LTS 64-bit"
 }
+variable "github_username" {
+  description = "Your GitHub username, used for GHCR login."
+  type        = string
+}
+
+variable "ghcr_pull_token" {
+  description = "GitHub Personal Access Token (PAT) with read:packages scope."
+  type        = string
+  sensitive   = true
+}
+
+variable "ghcr_image_path" {
+  description = "The repository path for the Docker image (e.g., username/repo-name)."
+  type        = string
+}
+
+variable "ghcr_image_tag" {
+  description = "The tag of the Docker image to pull (e.g., latest)."
+  type        = string
+  default     = "latest"
+}

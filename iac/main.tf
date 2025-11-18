@@ -43,7 +43,7 @@ resource "exoscale_security_group_rule" "allow_ssh" {
   cidr              = "0.0.0.0/0"
 }
 
-# HTTP
+# HTTP (Container is running on port 80)
 resource "exoscale_security_group_rule" "allow_http" {
   security_group_id = exoscale_security_group.svc.id
   description       = "Allow HTTP"
@@ -76,7 +76,8 @@ resource "exoscale_security_group_rule" "egress_all" {
   cidr              = "0.0.0.0/0"
 }
 
-# --- Create the compute instance (VM) ---
+# --- Create the single compute instance (VM) ---
+# FIX APPLIED: Using 'templatefile' to correctly pass GHCR variables into cloud-init.yaml
 resource "exoscale_compute_instance" "app" {
   zone               = var.zone
   name               = var.instance_name
@@ -85,18 +86,13 @@ resource "exoscale_compute_instance" "app" {
   disk_size          = 10
   security_group_ids = [exoscale_security_group.svc.id]
   ssh_key            = exoscale_ssh_key.local.name
-  user_data          = file("${path.module}/cloud-init.yaml")
+  
+  user_data = templatefile("${path.module}/cloud-init.yaml", {
+    github_username   = var.github_username
+    ghcr_pull_token   = var.ghcr_pull_token
+    ghcr_image_path   = var.ghcr_image_path
+    ghcr_image_tag    = var.ghcr_image_tag
+  })
 }
 
-# --- Second compute instance (App Server 2) ---
-resource "exoscale_compute_instance" "app2" {
-  zone               = var.zone
-  name               = "${var.instance_name}-2"
-  type               = var.instance_type
-  template_id        = data.exoscale_template.ubuntu.id
-  disk_size          = 10
-  security_group_ids = [exoscale_security_group.svc.id]
-  ssh_key            = exoscale_ssh_key.local.name
-  user_data          = file("${path.module}/cloud-init.yaml")
-}
-
+# --- Second compute instance "app2" has been removed as requested ---

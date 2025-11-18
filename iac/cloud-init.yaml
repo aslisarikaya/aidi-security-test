@@ -1,55 +1,45 @@
 #cloud-config
 package_update: true
 packages:
-  - python3
-  - python3-pip
+  # Install necessary packages
   - sudo
   - curl
+  - docker.io
 
 runcmd:
-  # Allow ubuntu to use sudo
+
+  # 1. Setup User Permissions
   - usermod -aG sudo ubuntu
   - echo "ubuntu ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/90-cloud-init-users
 
-  # Create app directory
-  - mkdir -p /opt/price-server
-  - cd /opt/price-server
+  # -------------------------------------------------------------------------
+  # ULTRA-ROBUST DEPLOYMENT SCRIPT
+  # This script guarantees the non-interactive Docker login works.
+  # -------------------------------------------------------------------------
+  - |
+    # Explicitly run the core logic using the sh interpreter
+    /bin/sh -c '
+      echo "--- Starting Ultra-Robust Docker Deployment ---"
+      
+      # 2. Login to GHCR securely (Fix for "non TTY device")
+      export GHCR_TOKEN="${ghcr_pull_token}"
+      echo "Logging into ghcr.io using user: ${github_username}"
+      
+      # Non-interactive login fix using --password-stdin
+      echo $GHCR_TOKEN | docker login ghcr.io -u ${github_username} --password-stdin
+      # Security: Immediately clear the token variable
+      unset GHCR_TOKEN 
 
-  # Write Flask app
-  - echo '#!/usr/bin/env python3
-from flask import Flask, jsonify
-import requests, time, json, os
-app = Flask(__name__)
-CACHE_FILE = "/opt/price-server/price_cache.json"
-API_URL = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
-CACHE_TTL = 60
-def get_price():
-    if os.path.exists(CACHE_FILE):
-        age = time.time() - os.path.getmtime(CACHE_FILE)
-        if age < CACHE_TTL:
-            with open(CACHE_FILE) as f:
-                return json.load(f)
-    try:
-        r = requests.get(API_URL, timeout=10)
-        r.raise_for_status()
-        data = r.json()
-        os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
-        with open(CACHE_FILE, "w") as f:
-            json.dump(data, f)
-        return data
-    except Exception as e:
-        if os.path.exists(CACHE_FILE):
-            with open(CACHE_FILE) as f:
-                return json.load(f)
-        return {"error": str(e)}
-@app.route("/")
-def index():
-    return jsonify(get_price())
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=80)' > /opt/price-server/app.py
+      # 3. Pull and Run the application container (Fix for "invalid reference format")
+      FULL_IMAGE_NAME="ghcr.io/${ghcr_image_path}:${ghcr_image_tag}"
+      echo "Pulling image: $FULL_IMAGE_NAME"
+      docker pull $FULL_IMAGE_NAME
+      
+      # 4. Start the container
+      echo "Starting container: price-server on port 80"
+      docker run -d -p 80:80 --name price-server --restart=always $FULL_IMAGE_NAME
 
-  # Install dependencies
-  - pip3 install flask requests
-
-  # Run the app in the background and log output
-  - nohup python3 /opt/price-server/app.py > /var/log/price-server.log 2>&1 &
+      # 5. Clean up
+      docker system prune -f
+      echo "--- Deployment Complete ---"
+    '

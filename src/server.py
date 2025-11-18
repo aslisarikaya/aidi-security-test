@@ -4,10 +4,12 @@ Einfacher Flask-Webserver, der den aktuellen Bitcoin-Kurs von CoinGecko abfragt.
 
 Funktion:
 ---------
-- Bei jedem HTTP-Aufruf (GET /) liefert der Server einen JSON-Response mit dem aktuellen Preis.
+- Bei jedem HTTP-Aufruf (GET /) liefert der Server einen JSON-Response mit dem 
+  aktuellen Preis.
 - Der Preis wird lokal in einer Cache-Datei gespeichert.
 - Nur wenn der Cache älter als 60 Sekunden ist, wird ein neuer Wert von der API geholt.
-- Wenn die API nicht erreichbar ist, wird der zuletzt gespeicherte Preis aus dem Cache zurückgegeben.
+- Wenn die API nicht erreichbar ist, wird der zuletzt gespeicherte Preis aus dem Cache 
+  zurückgegeben.
 
 Deployment:
 -----------
@@ -20,24 +22,28 @@ import requests
 import time
 import json
 import os
+
 # Flask-App initialisieren
 app = Flask(__name__)
 
 # Konfiguration
 CACHE_FILE = "/opt/price-server/price_cache.json"
-API_URL = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
+# Line wrapped for E501 (line too long) compliance
+API_URL = ("https://api.coingecko.com/api/v3/simple/price?"
+           "ids=bitcoin&vs_currencies=usd") 
 CACHE_TTL = 60  # Sekunden
 
-def get_price():
+
+def get_price():  # Fixed E302: now has two blank lines above
     """
     Liefert den Bitcoin-Kurs, entweder aus dem Cache oder frisch von der API.
 
     Ablauf:
     1. Prüfen, ob Cache-Datei existiert und jünger als CACHE_TTL ist.
-       -> Falls ja, Rückgabe des gespeicherten Werts.
+        -> Falls ja, Rückgabe des gespeicherten Werts.
     2. Andernfalls neuen Kurs von der API abrufen.
-       -> Bei Erfolg: Cache-Datei aktualisieren und neuen Wert zurückgeben.
-       -> Bei Fehler: Falls Cache vorhanden, alten Wert zurückgeben.
+        -> Bei Erfolg: Cache-Datei aktualisieren und neuen Wert zurückgeben.
+        -> Bei Fehler: Falls Cache vorhanden, alten Wert zurückgeben.
     """
     # Prüfen, ob Cache existiert und aktuell ist
     if os.path.exists(CACHE_FILE):
@@ -65,10 +71,12 @@ def get_price():
                 return json.load(f)
         return {"error": f"API request failed: {e}"}
 
+
 @app.route("/")
-def index():
+def index():  # Fixed E302: now has two blank lines above
     """HTTP-Handler: Gibt den aktuellen Preis als JSON aus."""
     return jsonify(get_price())
+
 
 if __name__ == "__main__":
     # Server starten – hört auf allen Interfaces, Port 80
