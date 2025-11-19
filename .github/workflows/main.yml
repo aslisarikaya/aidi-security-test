@@ -41,6 +41,9 @@ jobs:
         # You must ensure these packages are installed here if they are not in your Dockerfile
         run: pip install flake8 ruff pytest
 
+      - name: Install Project Dependencies
+        run: pip install -r requirements.txt
+
       - name: Code Formatting Check (Ruff)
         run: ruff check src/
 
