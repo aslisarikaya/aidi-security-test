@@ -14,8 +14,6 @@ terraform {
       name = "aidi2"
     }
   }
-
-  
 }
 
 provider "exoscale" {
