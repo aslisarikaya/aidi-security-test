@@ -1,91 +1,144 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline - Best Practices
 
 on:
   push:
-    branches: [ "main", "develop", "feature/**" ]
+    branches:
+      - main
+      - develop
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+' # Semantic version tags
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
+      - develop
+  # Triggers the deployment job specifically for stable releases
   release:
     types: [published]
 
+# Environment variables
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }} # e.g., safaesiraji-lab/aidi2
+  DOCKERFILE_PATH: src/Dockerfile
+  WORKING_DIRECTORY: .
+
 jobs:
-  # CODE QUALITY STEPS
-  format:
-    name: Code Formatting
+  # ----------------------------------------------------------------------------------
+  # 1. QUALITY CHECK PHASE (Single Job for Efficiency)
+  # ----------------------------------------------------------------------------------
+  quality-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      - run: pip install black flake8
-      - run: black --check src/
-      - run: flake8 src/
+          cache: 'pip'
 
-  lint:
-    name: Lint Python Code
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      - run: pip install ruff pylint
-      - run: ruff check src/
-      - run: pylint src/
+      - name: Install All Dependencies (App, Test, Lint)
+        # Assuming all dependencies including black, ruff, pytest, etc., are installed here
+        run: pip install -r src/requirements.txt black ruff pytest requests
 
-  test:
-    name: Run Unit Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      - run: pip install pytest
-      - run: pytest tests/ --cov=src --cov-report=xml
-
-  # CONTAINER BUILDING WITH DIFFERENT STRATEGIES
-  build-container:
-    name: Build Container
-    runs-on: ubuntu-latest
-    needs: [format, lint, test]
-    outputs:
-      image-tag: ${{ steps.set-tag.outputs.image-tag }}
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set image tag
-        id: set-tag
+      - name: Code Formatting & Linting (Black & Ruff)
         run: |
-          if [[ "${{ github.event_name }}" == "release" ]]; then
-            echo "image-tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "image-tag=latest" >> $GITHUB_OUTPUT
-          else
-            # For feature branches: convert branch name to slug
-            BRANCH_SLUG=$(echo "${{ github.ref_name }}" | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]')
-            echo "image-tag=$BRANCH_SLUG" >> $GITHUB_OUTPUT
-          fi
-      
-      - name: Log in to GitHub Container Registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      
-      - name: Build container
-        run: |
-          IMAGE=ghcr.io/${{ github.repository }}:${{ steps.set-tag.outputs.image-tag }}
-          docker build -t $IMAGE .
-          docker push $IMAGE
+          black --check src/
+          ruff check src/
 
-  # SECURITY SCANS (Placeholder for Übung 4)
-  security-scan:
-    name: Security Scan
+      - name: Run Unit Tests (Pytest)
+        # Ensure your tests are configured to run correctly
+        run: pytest src/
+
+      # Placeholder for Exercise 4 (SAST/SCA)
+      - name: Code Security Check (SAST/SCA)
+        run: echo "TODO: Execute the aikido-local-scanner scan here."
+
+  # ----------------------------------------------------------------------------------
+  # 2. CONTAINER BUILD & PUSH PHASE
+  # ----------------------------------------------------------------------------------
+  build-and-push:
+    needs: quality-check
     runs-on: ubuntu-latest
-    needs: build-container
-    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write # Necessary for pushing to GHCR
+    
     steps:
-      - name: SAST Scan Placeholder
-        run: echo "SAST scanning would happen here (Übung 4)"
-      
-      - name: Container Scan Placeholder  
-        run: echo "Container security scanning would happen here (Übung 4)"
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Docker Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }} 
+
+      - name: Extract Docker Metadata (Tagging Logic)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # Define tags based on Git reference:
+          tags: |
+            # Tags for stable releases (vX.Y.Z)
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            # Tags for feature/dev branches (using branch name as slug)
+            type=raw,value={{branch}},enable=true,event=branch,priority=600
+            # Tags for Pull Requests (using PR number)
+            type=ref,event=pr
+            # Short SHA tag (fallback)
+            type=sha,format=short
+          
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ env.WORKING_DIRECTORY }}
+          file: ${{ env.DOCKERFILE_PATH }}
+          # Push only when on main/tags/release, or if explicitly requested in a deployment context
+          push: ${{ github.event_name == 'push' || github.event_name == 'release' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      # Placeholder for Exercise 4 (Image Scan)
+      - name: Container Security Check (Image Scan)
+        run: echo "TODO: Execute the aikido-local-scanner image-scan here."
+
+  # ----------------------------------------------------------------------------------
+  # 3. DEPLOYMENT PHASE (Runs only on stable Releases)
+  # ----------------------------------------------------------------------------------
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    # Run only for official releases pushed via git tags or the GitHub release event
+    if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v') 
+    
+    steps:
+      - name: Checkout IaC Code
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }} 
+          path: iac
+          
+      - name: Terraform Apply (Deployment)
+        working-directory: iac
+        run: |
+          # Use the tag name from the release event or the git tag
+          IMAGE_TAG=${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
+          
+          echo "Starting production deployment for image tag: $IMAGE_TAG"
+
+          terraform init
+          # Apply using the image tag as a variable override
+          terraform apply -auto-approve -var "ghcr_image_tag=$IMAGE_TAG"
+        env:
+          # Exoscale secrets required for Terraform execution
+          EXOSCALE_API_KEY: ${{ secrets.EXOSCALE_API_KEY }}
+          EXOSCALE_SECRET_KEY: ${{ secrets.EXOSCALE_SECRET_KEY }}
+          # The GHCR token is also needed if the image is private, passed as a Terraform variable
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+          GITHUB_USERNAME: ${{ github.actor }}
+          GHCR_IMAGE_PATH: ${{ env.IMAGE_NAME }}
