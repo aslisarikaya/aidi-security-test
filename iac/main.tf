@@ -7,6 +7,15 @@ terraform {
       version = ">= 0.51.0"
     }
   }
+  cloud {
+    organization = "aidi2"
+
+    workspaces {
+      name = "aidi2"
+    }
+  }
+
+  
 }
 
 provider "exoscale" {
