@@ -1,21 +1,4 @@
 #!/usr/bin/env python3
-"""
-Einfacher Flask-Webserver, der den aktuellen Bitcoin-Kurs von CoinGecko abfragt.
-
-Funktion:
----------
-- Bei jedem HTTP-Aufruf (GET /) liefert der Server einen JSON-Response mit dem 
-  aktuellen Preis.
-- Der Preis wird lokal in einer Cache-Datei gespeichert.
-- Nur wenn der Cache älter als 60 Sekunden ist, wird ein neuer Wert von der API geholt.
-- Wenn die API nicht erreichbar ist, wird der zuletzt gespeicherte Preis aus dem Cache 
-  zurückgegeben.
-
-Deployment:
------------
-Dieses Script ist so geschrieben, dass es sowohl direkt auf einer VM (über Cloud-init)
-als auch in einem Container (Docker) laufen kann.
-"""
 
 from flask import Flask, jsonify
 import requests
