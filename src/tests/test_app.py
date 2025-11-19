@@ -8,3 +8,4 @@ def test_index_route():
     data = response.get_json()
     assert "bitcoin" in data
     assert "usd" in data["bitcoin"]
+    
