@@ -115,4 +115,4 @@ jobs:
 
       # --- Container Security Check (Image Scan - Exercise 4 Placeholder) ---
       - name: Container Security Check (Image Scan)
-        run: echo "TODO Execute the aikido-local-scanner image-scan here."
+        run: echo "TODO Execute the aikido-local-scanner image-scan here."
