@@ -30,7 +30,7 @@ app = Flask(__name__)
 CACHE_FILE = "/opt/price-server/price_cache.json"
 # Line wrapped for E501 (line too long) compliance
 API_URL = ("https://api.coingecko.com/api/v3/simple/price?"
-           "ids=bitcoin&vs_currencies=usd") 
+           "ids=bitcoin&vs_currencies=usd")
 CACHE_TTL = 60  # Sekunden
 
 
