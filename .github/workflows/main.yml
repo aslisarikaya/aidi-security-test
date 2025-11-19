@@ -50,7 +50,7 @@ jobs:
       # --- Unit Tests ---
       - name: Run Pytest Unit Tests
         # Make sure your Python test files (e.g., test_server.py) are in the src/ directory
-        run: pytest src/
+        run: pytest
 
       # --- Code Security Check (SAST/SCA - Exercise 4 Placeholder) ---
       - name: Code Security Check (SAST/SCA)
