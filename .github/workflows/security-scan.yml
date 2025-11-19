@@ -1,0 +1,36 @@
+name: Security Scan with Aikido
+
+on:
+  push:
+    branches: [ main, aikido-testing ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    # 1. CODE SECURITY SCAN
+    - name: Run Aikido Code Security Scan
+      uses: aikido-security/aikido-action@v3
+      with:
+        api-key: ${{ secrets.AIKIDO_API_KEY }}
+        directory: "."
+        fail-on-severity: "critical"
+        
+    # 2. DOCKER BUILD
+    - name: Build Docker Image
+      run: docker build -t ghcr.io/${{ github.repository }}/btc-cache:${{ github.sha }} -f Dockerfile .
+      
+    # 3. CONTAINER SECURITY SCAN
+    - name: Scan Docker Image with Aikido
+      uses: aikido-security/aikido-action@v3
+      with:
+        api-key: ${{ secrets.AIKIDO_API_KEY }}
+        scan-type: image-scan
+        image-name: ghcr.io/${{ github.repository }}/btc-cache:${{ github.sha }}
+        fail-on-severity: "critical"
