@@ -75,6 +75,15 @@ def error_response(message: str, status_code: int):
     }), status_code
 
 
+@app.route('/', methods=['GET'])
+def index():
+    return jsonify({
+        "status": "ok",
+        "message": ("Welcome to the Currency Conversion API. "
+                    "Use /rates or /convert.")
+    })
+
+
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({"status": "ok", "service": "Currency Conversion API"})
