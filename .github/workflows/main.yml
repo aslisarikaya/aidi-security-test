@@ -17,7 +17,7 @@ env:
   # Configure the Container Registry path
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }} # e.g., safaesiraji00/aidi (uses your repo name)
-  DOCKERFILE_PATH: src/Dockerfile
+  DOCKERFILE_PATH: Dockerfile
 
 jobs:
   # ----------------------------------------------------------------------------------
@@ -36,11 +36,14 @@ jobs:
         with:
           python-version: '3.11' # Ensure this matches your development environment
 
+
       # --- Code Quality Checks (Linters & Formatters) ---
       - name: Install Linting & Testing Dependencies
         # You must ensure these packages are installed here if they are not in your Dockerfile
         run: pip install flake8 ruff pytest
 
+      - name: Install Project Dependencies
+        run: pip install -r requirements.txt
 
       - name: Code Formatting Check (Ruff)
         run: ruff check src/
@@ -59,7 +62,8 @@ jobs:
 
       # --- Docker Build ---
       - name: Build Docker Image (Build only, no Push for CI/Feature branches)
-        run: docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -f ${{ env.DOCKERFILE_PATH }} .
+        run: docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} -f Dockerfile .
+
 
 
   # ----------------------------------------------------------------------------------
@@ -99,10 +103,11 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ${{ env.DOCKERFILE_PATH }}
+          file: Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
 
       # --- Container Security Check (Image Scan - Exercise 4 Placeholder) ---
       - name: Container Security Check (Image Scan)
