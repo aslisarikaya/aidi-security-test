@@ -4,15 +4,20 @@ import os
 from flask import Flask, jsonify, request
 from typing import Dict, Any, Tuple
 
+
 app = Flask(__name__)
-EXCHANGE_RATE_API_URL = "https://v6.exchangerate-api.com/v6/YOUR_API_KEY_HERE/latest/USD"
+EXCHANGE_RATE_API_URL = (
+    "https://v6.exchangerate-api.com/v6/YOUR_API_KEY_HERE/latest/USD"
+)
 CACHE_DURATION = 60
 rate_cache: Dict[str, Any] = {}
+
 
 def get_exchange_rates() -> Tuple[Dict[str, float], str | None]:
     current_time = time.time()
 
-    if rate_cache and current_time < rate_cache.get('timestamp', 0) + CACHE_DURATION:
+    if (rate_cache and
+            current_time < rate_cache.get('timestamp', 0) + CACHE_DURATION):
         app.logger.info("Serving rates from cache.")
         return rate_cache['rates'], None
 
@@ -23,7 +28,10 @@ def get_exchange_rates() -> Tuple[Dict[str, float], str | None]:
         data = response.json()
 
         if data.get('result') != 'success':
-            error_msg = f"API returned non-success result: {data.get('error-type', 'Unknown Error')}"
+            error_msg = (
+                f"API returned non-success result: "
+                f"{data.get('error-type', 'Unknown Error')}"
+            )
             app.logger.error(error_msg)
             return {}, error_msg
 
@@ -41,7 +49,10 @@ def get_exchange_rates() -> Tuple[Dict[str, float], str | None]:
         rate_cache['timestamp'] = current_time
         rate_cache['rates'] = new_rates
 
-        app.logger.info(f"Successfully fetched and cached {len(new_rates)} exchange rates.")
+        app.logger.info(
+            f"Successfully fetched and cached {len(new_rates)} "
+            f"exchange rates."
+        )
         return new_rates, None
 
     except requests.exceptions.RequestException as e:
@@ -49,10 +60,13 @@ def get_exchange_rates() -> Tuple[Dict[str, float], str | None]:
         app.logger.error(error_msg)
 
         if rate_cache:
-            app.logger.warning("API fetch failed. Falling back to expired cache.")
+            app.logger.warning(
+                "API fetch failed. Falling back to expired cache."
+            )
             return rate_cache['rates'], None
 
         return {}, error_msg
+
 
 def error_response(message: str, status_code: int):
     return jsonify({
@@ -60,16 +74,20 @@ def error_response(message: str, status_code: int):
         "message": message
     }), status_code
 
+
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({"status": "ok", "service": "Currency Conversion API"})
+
 
 @app.route('/rates', methods=['GET'])
 def get_rates():
     rates, error = get_exchange_rates()
 
     if error and not rates:
-        return error_response(f"Could not retrieve any exchange rates. {error}", 503)
+        return error_response(
+            f"Could not retrieve any exchange rates. {error}", 503
+        )
 
     return jsonify({
         "status": "success",
@@ -87,24 +105,38 @@ def convert_currency():
         amount_str = request.args.get('amount')
 
         if not all([from_currency, to_currency, amount_str]):
-            return error_response("Missing required query parameters: 'from', 'to', and 'amount'.", 400)
+            return error_response(
+                "Missing required query parameters: "
+                "'from', 'to', and 'amount'.", 400
+            )
 
         try:
             amount = float(amount_str)
             if amount <= 0:
-                 return error_response("Amount must be a positive number.", 400)
+                return error_response(
+                    "Amount must be a positive number.", 400
+                )
         except ValueError:
-            return error_response("'amount' parameter must be a valid number.", 400)
+            return error_response(
+                "'amount' parameter must be a valid number.", 400
+            )
 
         rates, error = get_exchange_rates()
 
         if error and not rates:
-            return error_response(f"Could not retrieve exchange rates needed for conversion. {error}", 503)
+            return error_response(
+                f"Could not retrieve exchange rates needed for "
+                f"conversion. {error}", 503
+            )
 
         if from_currency not in rates:
-            return error_response(f"Source currency '{from_currency}' is not supported.", 400)
+            return error_response(
+                f"Source currency '{from_currency}' is not supported.", 400
+            )
         if to_currency not in rates:
-            return error_response(f"Target currency '{to_currency}' is not supported.", 400)
+            return error_response(
+                f"Target currency '{to_currency}' is not supported.", 400
+            )
 
         rate_from_usd = rates.get(from_currency, 1.0)
         amount_in_usd = amount / rate_from_usd
@@ -125,6 +157,7 @@ def convert_currency():
     except Exception as e:
         app.logger.exception("An unexpected internal server error occurred.")
         return error_response(f"Internal Server Error: {e}", 500)
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
