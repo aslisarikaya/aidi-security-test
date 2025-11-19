@@ -1,4 +1,4 @@
-from server import app
+from src.server import app 
 
 
 def test_index_route():
