@@ -1,30 +1,17 @@
-# ---------------------------------------------------------------------
-# Basis-Image: Leichtgewichtiges Python-Image
-# ---------------------------------------------------------------------
+# Use official Python runtime
 FROM python:3.11-slim
 
-# ---------------------------------------------------------------------
-# Arbeitsverzeichnis im Container
-# ---------------------------------------------------------------------
+# Set working directory
 WORKDIR /app
 
-# ---------------------------------------------------------------------
-# Anforderungen installieren
-# (direkt inline, da nur 2 Pakete benötigt werden)
-# ---------------------------------------------------------------------
+# Install app dependencies
 RUN pip install --no-cache-dir flask requests
 
-# ---------------------------------------------------------------------
-# Anwendungscode in Container kopieren
-# ---------------------------------------------------------------------
-COPY server.py /app/server.py
+# Copy all source code into the container
+COPY src/ /app/
 
-# ---------------------------------------------------------------------
-# Port 80 öffnen
-# ---------------------------------------------------------------------
-EXPOSE 80
+# Expose the app port (optional)
+EXPOSE 5000
 
-# ---------------------------------------------------------------------
-# Startbefehl des Containers
-# ---------------------------------------------------------------------
+# Run the Flask application
 CMD ["python", "server.py"]
