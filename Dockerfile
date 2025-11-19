@@ -13,5 +13,5 @@ COPY src/ /app/
 # Expose the app port (optional)
 EXPOSE 5000
 
-# Run the Flask application
+# Run  Flask application
 CMD ["python", "server.py"]
